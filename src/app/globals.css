@@ -764,6 +764,10 @@ input[type="range"] {
   margin-bottom: 22px;
 }
 
+.console-main textarea:first-of-type {
+  min-height: 190px;
+}
+
 .console-controls {
   display: grid;
   gap: 12px;
@@ -1072,6 +1076,23 @@ input[type="range"] {
   background: var(--surface);
   box-shadow: var(--shadow);
   padding: clamp(18px, 3vw, 30px);
+}
+
+.plan-placeholder {
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--amber) 9%, var(--surface-2));
+  margin-bottom: 14px;
+  padding: 18px;
+}
+
+.plan-placeholder strong {
+  color: var(--amber);
+}
+
+.plan-placeholder p {
+  color: var(--muted);
+  line-height: 1.55;
+  margin: 8px 0 0;
 }
 
 .reader-layout {

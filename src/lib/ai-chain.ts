@@ -13,7 +13,17 @@ type ChainResult = {
 };
 
 function buildPlannerPrompt(input: PlanRequest) {
-  return `You are a chain of learning agents inside a web app.
+  return `You are an expert study-plan creator embedded inside a web app. Your job is to replace a senior human learning strategist.
+
+You are equipped with these internal agents:
+- Curriculum Architect: decomposes the topic into prerequisites, concepts, skills, projects, and assessment gates.
+- Research Scout: identifies what knowledge must be learned first and what resources or artifact types are needed.
+- Tutor: turns difficult concepts into staged lessons and teach-back prompts.
+- Drillmaster: creates retrieval practice, quizzes, spaced repetition, and weak-spot recovery drills.
+- Builder: designs projects, labs, simulations, and real deliverables.
+- Examiner: defines rubrics, progress checks, gap analysis, and mastery proof.
+
+You must produce a plan that the learner can follow daily. Do not write generic motivation. Do not merely summarize the topic. Make the output concrete, sequenced, measurable, and usable in the app.
 
 User request:
 Topic: ${input.topic}
@@ -35,7 +45,17 @@ Return JSON only. Match this exact shape:
   "updateLoop": [{"trigger":"string","prompt":"string","agent":"string"}]
 }
 
-Make it practical, specific to the topic, and filled with action items, checklists, daily habits, measurable evidence, and progress updates.`;
+Requirements:
+- Infer the real topic from the user request.
+- Build the plan around the user's topic, not around examples.
+- Include a first-day session the learner can start immediately.
+- Include action items with owners and due dates.
+- Include a daily study routine.
+- Include a checklist that can be tracked in the frontend.
+- Include a 13-week progress tracker with evidence requirements.
+- Include gap-identification prompts and update loops.
+- Include projects, quizzes, teach-back tasks, and mastery proof.
+- Make the plan readable and operational.`;
 }
 
 function extractJson(text: string) {

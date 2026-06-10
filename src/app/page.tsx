@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import type { LearningPlan, PlanRequest } from "@/lib/learning-engine";
-import { createLearningPlan } from "@/lib/learning-engine";
+import { createLearningPlan, deriveTopicFromPrompt } from "@/lib/learning-engine";
 import { DEFAULT_MODEL_ID, getModelById, MODELS } from "@/lib/models";
 import type { GapAnalysis } from "@/lib/analysis";
 
@@ -36,22 +36,19 @@ type TrackerEvent = {
 const processSteps = ["Diagnose", "Compress", "Explain", "Drill", "Build", "Defend"];
 
 const starterPlan = createLearningPlan({
-  topic: "Foundry technical solution",
-  outcome:
-    "Generate a detailed learning plan and roadmap to master Foundry technical solution work, with action items, checklist, daily routine, progress tracker, and update loops.",
+  topic: "Your learning goal",
+  outcome: "Enter a topic or goal in the AI study-plan chatbox to generate a comprehensive plan.",
   level: "Intermediate",
   hoursPerWeek: 10,
   modelId: DEFAULT_MODEL_ID,
-  constraints:
-    "Prioritize hands-on projects, technical architecture, customer solutioning, implementation patterns, and measurable proof of mastery."
+  constraints: "Create a comprehensive, daily-use study plan with lessons, projects, quizzes, checklist, and gap analysis."
 });
 
 export default function Home() {
   const [theme, setTheme] = useState<Theme>("dark");
-  const [topic, setTopic] = useState(starterPlan.topic);
-  const [outcome, setOutcome] = useState(starterPlan.outcome);
+  const [chatPrompt, setChatPrompt] = useState("");
   const [constraints, setConstraints] = useState(
-    "Prioritize hands-on projects, technical architecture, customer solutioning, implementation patterns, and measurable proof of mastery."
+    "Create a comprehensive, daily-use study plan with lessons, projects, quizzes, checklist, and gap analysis."
   );
   const [level, setLevel] = useState<Level>("Intermediate");
   const [hoursPerWeek, setHoursPerWeek] = useState(10);
@@ -146,8 +143,7 @@ export default function Home() {
 
       const stored = planPayload.plan;
       setPlan(stored.plan);
-      setTopic(stored.topic);
-      setOutcome(stored.outcome);
+      setChatPrompt(stored.outcome);
       setLevel(stored.level);
       setHoursPerWeek(stored.hours_per_week);
       setModelId(stored.model_id);
@@ -164,13 +160,21 @@ export default function Home() {
   }
 
   async function generatePlan() {
+    const prompt = chatPrompt.trim();
+    const inferredTopic = deriveTopicFromPrompt(prompt);
+
+    if (!prompt) {
+      setError("Enter what you want to learn in the AI study-plan chatbox.");
+      return;
+    }
+
     setIsGenerating(true);
     setError("");
     setAgentTrace(
       plan.agentChain.map((agent) => ({
-        agent: agent.agent,
-        modelId: agent.modelId,
-        status: "fallback",
+          agent: agent.agent,
+          modelId: agent.modelId,
+          status: "fallback",
         note: `${agent.agent} queued for ${getModelById(agent.modelId).name}.`
       }))
     );
@@ -180,8 +184,8 @@ export default function Home() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          topic,
-          outcome,
+          topic: inferredTopic,
+          outcome: prompt,
           constraints,
           level,
           hoursPerWeek,
@@ -274,7 +278,7 @@ export default function Home() {
         </a>
         <div className="nav-actions">
           <a href="#plan-output">Plan</a>
-          <a href="#sprint">20h sprint</a>
+          <a href="#console">Chatbox</a>
           <a href="#tracker">Tracker</a>
           <button className="theme-toggle" onClick={() => setTheme(theme === "dark" ? "light" : "dark")} type="button">
             {theme === "dark" ? "Light" : "Dark"}
@@ -284,10 +288,10 @@ export default function Home() {
 
       <section className="hero" aria-labelledby="hero-title">
         <div className="hero-copy">
-          <p className="eyebrow">Embedded AI learning agents</p>
-          <h1 id="hero-title">Generate a real roadmap, then execute it.</h1>
+          <p className="eyebrow">AI study-plan creator</p>
+          <h1 id="hero-title">Ask for any topic. Get a usable study plan.</h1>
           <p>
-            Enter a goal like "master Foundry technical solution." The app routes the job through a model chain and returns action items, checklists, daily routines, progress trackers, and update prompts.
+            Type your learning goal into the chatbox. The planner agent creates a comprehensive daily-use plan with lessons, actions, projects, progress tracking, and gap identification.
           </p>
           <div className="hero-actions">
             <a className="primary-action" href="#console">Generate plan</a>
@@ -307,18 +311,19 @@ export default function Home() {
 
       <section className="agent-console" id="console" aria-label="AI agent console">
         <div className="console-main">
-          <p className="eyebrow">Prompt to plan</p>
-          <h2>Ask the embedded chain to build your learning tool</h2>
+          <p className="eyebrow">AI chatbox</p>
+          <h2>What do you want to learn?</h2>
           <label>
-            What do you want to learn or master?
-            <input value={topic} onChange={(event) => setTopic(event.target.value)} />
+            Study-plan request
+            <textarea
+              placeholder="Example: Generate a comprehensive 90-day study plan to master enterprise data architecture, including daily routine, projects, quizzes, checklist, progress tracker, and gap analysis."
+              value={chatPrompt}
+              onChange={(event) => setChatPrompt(event.target.value)}
+              rows={8}
+            />
           </label>
           <label>
-            Request
-            <textarea value={outcome} onChange={(event) => setOutcome(event.target.value)} rows={5} />
-          </label>
-          <label>
-            Focus and constraints
+            Planner instructions
             <textarea value={constraints} onChange={(event) => setConstraints(event.target.value)} rows={4} />
           </label>
           <div className="console-controls">
@@ -353,7 +358,7 @@ export default function Home() {
           </div>
           <div className="console-actions">
             <button className="generate-button" disabled={isGenerating} onClick={generatePlan} type="button">
-              {isGenerating ? "Agents generating..." : `Generate with ${selectedModel.name}`}
+              {isGenerating ? "Creating study plan..." : `Create study plan with ${selectedModel.name}`}
             </button>
             <span className={generationMode === "live-model" ? "mode-pill live" : "mode-pill"}>
               {generationMode === "live-model" ? "Live model" : "Local fallback"}
@@ -433,9 +438,17 @@ export default function Home() {
 
       <section className="plan-output" id="plan-output" aria-label="Generated learning plan output">
         <div className="section-heading">
-          <p className="eyebrow">Generated output</p>
-          <h2>Use this plan every day</h2>
+          <p className="eyebrow">Generated study plan</p>
+          <h2>{plan.topic === "Your learning goal" ? "Your plan will appear here" : "Use this plan every day"}</h2>
         </div>
+        {plan.topic === "Your learning goal" ? (
+          <div className="plan-placeholder">
+            <strong>No plan generated yet.</strong>
+            <p>
+              Use the AI chatbox above to ask for a study plan. The generated response will render here as a readable daily plan with action items, routine, roadmap, checklist, tracker, and gap-analysis controls.
+            </p>
+          </div>
+        ) : null}
         <div className="reader-layout">
           <article className="reader-main">
             <span className="reader-kicker">Active plan</span>

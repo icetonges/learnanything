@@ -143,6 +143,18 @@ function topicSlug(topic: string) {
     .slice(0, 32);
 }
 
+export function deriveTopicFromPrompt(prompt: string) {
+  const cleaned = clampText(prompt, "Your learning goal", 180)
+    .replace(/^(generate|create|build|make|design)\s+(a\s+)?/i, "")
+    .replace(/(detailed?|comprehensive|complete)\s+/gi, "")
+    .replace(/(study|learning)\s+(plan|roadmap)\s+(for|to)?\s*/gi, "")
+    .replace(/^(for|to|about)\s+/i, "")
+    .replace(/\s+(with|including|include)\s+.*$/i, "")
+    .trim();
+
+  return cleaned || "Your learning goal";
+}
+
 export function createLearningPlan(input: PlanRequest): LearningPlan {
   const topic = clampText(input.topic, "Any knowledge domain", 120);
   const outcome = clampText(input.outcome, "Build practical mastery and prove it with a project.", 220);
