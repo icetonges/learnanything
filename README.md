@@ -9,7 +9,9 @@ An AI-native learning planner built with Next.js, React, TypeScript, and CSS. Th
 - 20-hour accelerated learning sprint with exercises and proof gates
 - 90-day mastery roadmap with foundation, fluency, and mastery phases
 - Agent chain for Scout, Tutor, Drillmaster, Builder, and Examiner roles
+- Server-side model-chain adapter for Google Gemini, Groq, and Anthropic
 - Weekly operating system that turns study time into concrete outputs
+- Action items, daily routine, execution checklist, 13-week progress tracker, and update prompts
 - Cost-aware model marketplace for Gemini, Groq, and Claude options
 - API route at `/api/plan` that validates input and returns a structured plan
 - Generated local hero image in `public/assets/ai-learning-cockpit.png`
@@ -19,7 +21,7 @@ An AI-native learning planner built with Next.js, React, TypeScript, and CSS. Th
 
 Model configuration lives in `src/lib/models.ts`. The default planner model is `gemini-3.5-flash`, with additional Google, Groq, and Anthropic options available in the front-end model selector.
 
-The current `/api/plan` route uses a deterministic local planner so the product works without paid keys. It is intentionally shaped as a server-side boundary so live provider adapters can be added without exposing secrets in the browser.
+The `/api/plan` route first tries the selected provider through a server-side adapter, then falls back to the deterministic local planner if the provider key is missing or the request fails. API keys never go to the browser.
 
 ## Local development
 

@@ -200,7 +200,11 @@ h1 {
 .workspace,
 .insights,
 .roadmap,
-.process-flow {
+.process-flow,
+.agent-console,
+.tool-grid,
+.tracker-grid,
+.update-loop {
   max-width: 1240px;
   margin: 22px auto 0;
 }
@@ -239,7 +243,10 @@ h1 {
 }
 
 .workspace,
-.insights {
+.insights,
+.agent-console,
+.tool-grid,
+.tracker-grid {
   display: grid;
   gap: 18px;
   grid-template-columns: minmax(320px, 0.8fr) minmax(0, 1.2fr);
@@ -248,7 +255,13 @@ h1 {
 .planner-panel,
 .dashboard-panel,
 .chart-panel,
-.model-panel {
+.model-panel,
+.console-main,
+.agent-run,
+.action-panel,
+.routine-panel,
+.checklist-panel,
+.progress-panel {
   padding: clamp(18px, 3vw, 30px);
 }
 
@@ -732,10 +745,217 @@ input[type="range"] {
   top: 12px;
 }
 
+.console-main,
+.agent-run,
+.action-panel,
+.routine-panel,
+.checklist-panel,
+.progress-panel {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.console-main h2 {
+  font-size: clamp(1.7rem, 4vw, 3.2rem);
+  line-height: 1.02;
+  margin-bottom: 22px;
+}
+
+.console-controls {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.console-actions {
+  align-items: center;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.mode-pill {
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 900;
+  padding: 12px 14px;
+  text-align: center;
+}
+
+.mode-pill.live {
+  border-color: var(--teal);
+  color: var(--teal);
+}
+
+.agent-run,
+.action-panel,
+.routine-panel,
+.checklist-panel,
+.progress-panel {
+  align-content: start;
+  display: grid;
+  gap: 12px;
+}
+
+.trace-row {
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  display: grid;
+  gap: 7px;
+  padding: 13px;
+}
+
+.trace-row span {
+  color: var(--amber);
+  font-size: 0.8rem;
+  font-weight: 900;
+}
+
+.trace-row p {
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.45;
+  margin-bottom: 0;
+}
+
+.progress-strip {
+  display: grid;
+  gap: 9px;
+}
+
+.progress-strip span {
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.progress-strip div,
+.mini-meter {
+  background: var(--surface-3);
+  height: 10px;
+  overflow: hidden;
+}
+
+.progress-strip i,
+.mini-meter i {
+  background: linear-gradient(90deg, var(--teal), var(--amber));
+  display: block;
+  height: 100%;
+}
+
+.action-panel article,
+.routine-panel article,
+.tracker-list article {
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  display: grid;
+  gap: 14px;
+  padding: 14px;
+}
+
+.action-panel article {
+  align-items: center;
+  grid-template-columns: 1fr auto;
+}
+
+.action-panel p,
+.routine-panel p,
+.tracker-list p {
+  color: var(--muted);
+  line-height: 1.45;
+  margin: 6px 0 0;
+}
+
+.action-panel article > span,
+.routine-panel article > span,
+.tracker-list article > span {
+  background: var(--amber);
+  color: #16100a;
+  font-size: 0.76rem;
+  font-weight: 900;
+  padding: 7px 9px;
+}
+
+.routine-panel article,
+.tracker-list article {
+  grid-template-columns: 68px 1fr;
+}
+
+.check-row {
+  align-items: start;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  cursor: pointer;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 22px 1fr;
+  margin: 0;
+  padding: 13px;
+}
+
+.check-row input {
+  accent-color: var(--teal);
+  margin-top: 2px;
+  padding: 0;
+  width: 18px;
+}
+
+.check-row span {
+  display: grid;
+  gap: 4px;
+}
+
+.check-row small {
+  color: var(--muted);
+}
+
+.tracker-list {
+  display: grid;
+  gap: 10px;
+  max-height: 650px;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.update-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.update-grid article {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  min-height: 230px;
+  padding: 18px;
+}
+
+.update-grid span {
+  color: var(--teal);
+  font-size: 0.8rem;
+  font-weight: 900;
+}
+
+.update-grid h3 {
+  margin: 12px 0;
+}
+
+.update-grid p {
+  color: var(--muted);
+  line-height: 1.55;
+  margin-bottom: 0;
+}
+
 @media (max-width: 980px) {
   .hero,
   .workspace,
-  .insights {
+  .insights,
+  .agent-console,
+  .tool-grid,
+  .tracker-grid {
     grid-template-columns: 1fr;
   }
 
@@ -748,7 +968,8 @@ input[type="range"] {
   .timeline,
   .process-flow,
   .sprint-cards,
-  .model-grid {
+  .model-grid,
+  .update-grid {
     grid-template-columns: repeat(2, 1fr);
   }
 }
@@ -770,6 +991,11 @@ input[type="range"] {
     grid-template-columns: repeat(3, 1fr);
   }
 
+  .console-controls,
+  .console-actions {
+    grid-template-columns: 1fr;
+  }
+
   .nav-actions a,
   .theme-toggle {
     min-width: 0;
@@ -786,7 +1012,8 @@ input[type="range"] {
   .timeline,
   .process-flow,
   .sprint-cards,
-  .model-grid {
+  .model-grid,
+  .update-grid {
     grid-template-columns: 1fr;
   }
 
