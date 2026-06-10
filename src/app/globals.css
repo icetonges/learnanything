@@ -48,7 +48,7 @@ textarea {
     var(--bg);
   color: var(--text);
   min-height: 100vh;
-  padding: 18px clamp(16px, 3vw, 42px) 56px;
+  padding: 18px clamp(14px, 3vw, 34px) 46px;
 }
 
 .shell.light {
@@ -69,7 +69,7 @@ textarea {
   background: color-mix(in srgb, var(--surface) 78%, transparent);
   display: flex;
   justify-content: space-between;
-  max-width: 1240px;
+  max-width: 1120px;
   margin: 0 auto 28px;
   min-height: 64px;
   padding: 10px 12px 10px 16px;
@@ -144,11 +144,21 @@ p {
 }
 
 h1 {
-  font-size: clamp(3rem, 8vw, 6.6rem);
-  line-height: 0.94;
+  font-size: clamp(2rem, 5vw, 3.8rem);
+  line-height: 1.02;
   letter-spacing: 0;
-  margin-bottom: 24px;
-  max-width: 850px;
+  margin-bottom: 16px;
+  max-width: 760px;
+}
+
+h2 {
+  font-size: clamp(1.25rem, 3vw, 2rem);
+  line-height: 1.12;
+}
+
+h3 {
+  font-size: 1.08rem;
+  line-height: 1.25;
 }
 
 .hero-copy > p:not(.eyebrow) {
@@ -613,6 +623,21 @@ input[type="range"] {
   box-shadow: var(--shadow);
 }
 
+.console-main,
+.plan-output,
+.saved-plans,
+.reader-main,
+.today-card,
+.reader-sections article,
+.reader-checklist,
+.reader-row,
+.compact-check,
+.saved-plan-card,
+.analysis-box {
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
 .sprint-cards article {
   min-height: 310px;
   padding: 18px;
@@ -748,32 +773,35 @@ input[type="range"] {
 }
 
 .app-workbench {
-  align-items: start;
   display: grid;
   gap: 18px;
-  grid-template-columns: minmax(320px, 0.72fr) minmax(0, 1.28fr);
-  max-width: 1240px;
+  grid-template-columns: 1fr;
+  max-width: 1120px;
   margin: 0 auto;
 }
 
 .control-column {
   display: grid;
   gap: 18px;
-  position: sticky;
-  top: 96px;
 }
 
 .tool-intro {
+  align-items: stretch;
   border: 1px solid var(--line);
   background: var(--surface);
   box-shadow: var(--shadow);
+  display: grid;
+  gap: 18px;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 0.48fr);
+  max-width: 1120px;
+  margin: 0 auto 18px;
   padding: clamp(18px, 3vw, 30px);
 }
 
 .tool-intro h1 {
-  font-size: clamp(2rem, 4vw, 3.9rem);
-  line-height: 0.98;
-  margin-bottom: 18px;
+  font-size: clamp(2rem, 5vw, 3.5rem);
+  line-height: 1.02;
+  margin-bottom: 14px;
 }
 
 .tool-intro p:not(.eyebrow) {
@@ -782,14 +810,68 @@ input[type="range"] {
   margin-bottom: 0;
 }
 
+.visual-panel {
+  border: 1px solid var(--line);
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--teal) 18%, transparent), transparent 60%),
+    var(--surface-2);
+  display: grid;
+  gap: 18px;
+  min-height: 240px;
+  padding: 18px;
+}
+
+.visual-orbit {
+  align-content: center;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.visual-orbit span {
+  align-items: center;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--teal);
+  display: flex;
+  font-weight: 900;
+  justify-content: center;
+  min-height: 74px;
+}
+
+.visual-bars {
+  align-items: end;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.visual-bars i {
+  background: linear-gradient(180deg, var(--amber), var(--teal));
+  display: block;
+  min-height: 44px;
+}
+
+.visual-bars i:nth-child(2) {
+  min-height: 88px;
+}
+
+.visual-bars i:nth-child(3) {
+  min-height: 64px;
+}
+
+.visual-bars i:nth-child(4) {
+  min-height: 116px;
+}
+
 .control-column .saved-plans {
   margin: 0;
   max-width: none;
 }
 
 .control-column .saved-plan-list {
-  grid-template-columns: 1fr;
-  max-height: 360px;
+  grid-template-columns: repeat(2, 1fr);
+  max-height: none;
   overflow: auto;
   padding-right: 4px;
 }
@@ -1178,8 +1260,8 @@ input[type="range"] {
 
 .reader-main h3,
 .today-card h3 {
-  font-size: clamp(1.5rem, 3vw, 2.4rem);
-  line-height: 1.08;
+  font-size: clamp(1.2rem, 2.7vw, 1.75rem);
+  line-height: 1.16;
   margin: 10px 0 14px;
 }
 
@@ -1207,8 +1289,12 @@ input[type="range"] {
 .reader-sections {
   display: grid;
   gap: 14px;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: 1fr;
   margin-top: 14px;
+}
+
+.reader-sections.two-column {
+  grid-template-columns: 1fr;
 }
 
 .reader-sections article {
@@ -1224,7 +1310,7 @@ input[type="range"] {
   border-top: 1px solid var(--line);
   display: grid;
   gap: 12px;
-  grid-template-columns: 86px 1fr;
+  grid-template-columns: minmax(72px, 0.22fr) minmax(0, 1fr);
   padding: 13px 0;
 }
 
@@ -1304,12 +1390,9 @@ input[type="range"] {
   .tracker-grid,
   .reader-layout,
   .reader-checklist,
-  .app-workbench {
+  .app-workbench,
+  .tool-intro {
     grid-template-columns: 1fr;
-  }
-
-  .control-column {
-    position: static;
   }
 
   .hero-copy,
@@ -1324,7 +1407,6 @@ input[type="range"] {
   .model-grid,
   .update-grid,
   .saved-plan-list,
-  .reader-sections,
   .reader-check-grid {
     grid-template-columns: repeat(2, 1fr);
   }
@@ -1371,8 +1453,11 @@ input[type="range"] {
   .model-grid,
   .update-grid,
   .saved-plan-list,
-  .reader-sections,
   .reader-check-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .reader-row {
     grid-template-columns: 1fr;
   }
 

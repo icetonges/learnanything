@@ -260,18 +260,33 @@ export default function Home() {
         </div>
       </nav>
 
-      <section className="app-workbench" aria-label="Study plan creator workspace">
-        <aside className="control-column" id="console">
-          <div className="tool-intro">
-            <p className="eyebrow">AI study-plan creator</p>
-            <h1>Ask for any topic. Get a usable study plan.</h1>
-            <p>
-              The planner agent creates a daily-use plan with lessons, actions, projects, checkpoints, progress tracking, and gap identification.
-            </p>
+      <section className="tool-intro" aria-labelledby="tool-title">
+        <div>
+          <p className="eyebrow">AI study-plan creator</p>
+          <h1 id="tool-title">Create a study plan you can actually follow.</h1>
+          <p>
+            Enter any learning goal. The planner agent turns it into a readable plan with daily actions, projects, checkpoints, saved progress, and gap analysis.
+          </p>
+        </div>
+        <div className="visual-panel" aria-hidden="true">
+          <div className="visual-orbit">
+            <span>Plan</span>
+            <span>Study</span>
+            <span>Track</span>
           </div>
+          <div className="visual-bars">
+            <i />
+            <i />
+            <i />
+            <i />
+          </div>
+        </div>
+      </section>
 
+      <section className="app-workbench" aria-label="Study plan creator workspace">
+        <div className="control-column" id="console">
           <div className="console-main">
-            <p className="eyebrow">AI chatbox</p>
+            <p className="eyebrow">AI study-plan creator</p>
             <h2>What do you want to learn?</h2>
           <label>
             Study-plan request
@@ -361,7 +376,7 @@ export default function Home() {
               )}
             </div>
           </div>
-        </aside>
+        </div>
 
         <section className="plan-output" id="plan-output" aria-label="Generated learning plan output">
           <div className="section-heading">
