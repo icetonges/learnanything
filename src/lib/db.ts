@@ -124,6 +124,44 @@ export async function getLearningPlan(planId: string) {
   return (rows[0] as StoredPlanRow | undefined) ?? null;
 }
 
+export async function updateLearningPlanInquiry(
+  planId: string,
+  input: {
+    topic: string;
+    outcome: string;
+    level: PlanRequest["level"];
+    hoursPerWeek: number;
+    modelId: string;
+  }
+) {
+  await ensureSchema();
+  const rows = await sql()`
+    update learning_plans
+    set
+      topic = ${input.topic},
+      outcome = ${input.outcome},
+      level = ${input.level},
+      hours_per_week = ${Math.round(input.hoursPerWeek)},
+      model_id = ${input.modelId},
+      updated_at = now()
+    where id = ${planId}
+    returning id, topic, outcome, level, hours_per_week, model_id, mode, plan, created_at, updated_at
+  `;
+
+  return (rows[0] as StoredPlanRow | undefined) ?? null;
+}
+
+export async function deleteLearningPlan(planId: string) {
+  await ensureSchema();
+  const rows = await sql()`
+    delete from learning_plans
+    where id = ${planId}
+    returning id
+  `;
+
+  return Boolean(rows[0]);
+}
+
 export async function addTrackerEvent(input: {
   planId: string;
   itemId: string;

@@ -51,6 +51,8 @@ export default function Home() {
   const [databaseStatus, setDatabaseStatus] = useState<"saved" | "not-configured" | "error">("not-configured");
   const [savedPlans, setSavedPlans] = useState<StoredPlanSummary[]>([]);
   const [savedPlansStatus, setSavedPlansStatus] = useState<"idle" | "loading" | "connected" | "not-configured" | "error">("idle");
+  const [editingPlanId, setEditingPlanId] = useState<string | null>(null);
+  const [editingInquiry, setEditingInquiry] = useState("");
   const [gapAnalysis, setGapAnalysis] = useState<GapAnalysis | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState("");
@@ -145,8 +147,82 @@ export default function Home() {
     }
   }
 
+  function startEditingStoredPlan(stored: StoredPlanSummary) {
+    setEditingPlanId(stored.id);
+    setEditingInquiry(stored.outcome);
+  }
+
+  async function saveStoredPlanInquiry(stored: StoredPlanSummary) {
+    const prompt = editingInquiry.trim();
+
+    if (!prompt) {
+      setError("Saved inquiry cannot be empty.");
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/plans/${stored.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          topic: deriveTopicFromPrompt(prompt),
+          outcome: prompt,
+          level: stored.level,
+          hoursPerWeek: stored.hours_per_week,
+          modelId: stored.model_id
+        })
+      });
+      const payload = (await response.json()) as { plan?: StoredPlanSummary; error?: string };
+
+      if (!response.ok || !payload.plan) {
+        throw new Error(payload.error ?? "Could not update saved inquiry.");
+      }
+
+      setSavedPlans((current) => current.map((item) => (item.id === stored.id ? payload.plan as StoredPlanSummary : item)));
+      setEditingPlanId(null);
+      setEditingInquiry("");
+      setError("");
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Could not update saved inquiry.");
+      setDatabaseStatus("error");
+    }
+  }
+
+  async function deleteStoredPlan(planId: string) {
+    try {
+      const response = await fetch(`/api/plans/${planId}`, { method: "DELETE" });
+
+      if (!response.ok) {
+        throw new Error("Could not delete saved plan.");
+      }
+
+      setSavedPlans((current) => current.filter((item) => item.id !== planId));
+      if (storedPlanId === planId) {
+        setStoredPlanId(null);
+        setCheckedItems({});
+        setGapAnalysis(null);
+        setDatabaseStatus("not-configured");
+      }
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Could not delete saved plan.");
+      setDatabaseStatus("error");
+    }
+  }
+
+  async function reproduceStoredPlan(stored: StoredPlanSummary) {
+    setChatPrompt(stored.outcome);
+    setLevel(stored.level);
+    setHoursPerWeek(stored.hours_per_week);
+    setModelId(stored.model_id);
+    await generatePlanFromPrompt(stored.outcome, stored.level, stored.hours_per_week, stored.model_id);
+  }
+
   async function generatePlan() {
     const prompt = chatPrompt.trim();
+    await generatePlanFromPrompt(prompt, level, hoursPerWeek, modelId);
+  }
+
+  async function generatePlanFromPrompt(prompt: string, nextLevel: Level, nextHoursPerWeek: number, nextModelId: string) {
     const inferredTopic = deriveTopicFromPrompt(prompt);
 
     if (!prompt) {
@@ -165,9 +241,9 @@ export default function Home() {
           topic: inferredTopic,
           outcome: prompt,
           constraints,
-          level,
-          hoursPerWeek,
-          modelId
+          level: nextLevel,
+          hoursPerWeek: nextHoursPerWeek,
+          modelId: nextModelId
         })
       });
 
@@ -360,16 +436,34 @@ export default function Home() {
             <div className="saved-plan-list">
               {savedPlans.length ? (
                 savedPlans.map((stored) => (
-                  <button
+                  <article
                     className={storedPlanId === stored.id ? "saved-plan-card active" : "saved-plan-card"}
                     key={stored.id}
                     onClick={() => void openStoredPlan(stored.id)}
-                    type="button"
                   >
                     <strong>{stored.topic}</strong>
                     <span>{new Date(stored.created_at).toLocaleString()}</span>
                     <p>{stored.outcome}</p>
-                  </button>
+                    <div className="saved-plan-actions" onClick={(event) => event.stopPropagation()}>
+                      <button onClick={() => void openStoredPlan(stored.id)} type="button">Open</button>
+                      <button onClick={() => startEditingStoredPlan(stored)} type="button">Edit</button>
+                      <button onClick={() => void reproduceStoredPlan(stored)} type="button">Reproduce</button>
+                      <button className="danger" onClick={() => void deleteStoredPlan(stored.id)} type="button">Delete</button>
+                    </div>
+                    {editingPlanId === stored.id ? (
+                      <div className="saved-plan-edit" onClick={(event) => event.stopPropagation()}>
+                        <textarea
+                          value={editingInquiry}
+                          onChange={(event) => setEditingInquiry(event.target.value)}
+                          rows={4}
+                        />
+                        <div>
+                          <button onClick={() => void saveStoredPlanInquiry(stored)} type="button">Save inquiry</button>
+                          <button onClick={() => setEditingPlanId(null)} type="button">Cancel</button>
+                        </div>
+                      </div>
+                    ) : null}
+                  </article>
                 ))
               ) : (
                 <div className="empty-state">Saved plans will appear here after generation.</div>

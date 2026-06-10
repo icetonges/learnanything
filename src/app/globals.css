@@ -1201,6 +1201,48 @@ input[type="range"] {
   margin: 0;
 }
 
+.saved-plan-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.saved-plan-actions button,
+.saved-plan-edit button {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 800;
+  min-height: 32px;
+  padding: 6px 9px;
+}
+
+.saved-plan-actions .danger {
+  border-color: color-mix(in srgb, var(--coral) 70%, var(--line));
+  color: var(--coral);
+}
+
+.saved-plan-edit {
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+  padding-top: 10px;
+}
+
+.saved-plan-edit textarea {
+  min-height: 92px;
+}
+
+.saved-plan-edit div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .empty-state {
   border: 1px solid var(--line);
   background: var(--surface-2);
