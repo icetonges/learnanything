@@ -273,6 +273,7 @@ export default function Home() {
           <span>LearnAnything AI</span>
         </a>
         <div className="nav-actions">
+          <a href="#plan-output">Plan</a>
           <a href="#sprint">20h sprint</a>
           <a href="#tracker">Tracker</a>
           <button className="theme-toggle" onClick={() => setTheme(theme === "dark" ? "light" : "dark")} type="button">
@@ -428,6 +429,98 @@ export default function Home() {
             <p>{metric.label}</p>
           </div>
         ))}
+      </section>
+
+      <section className="plan-output" id="plan-output" aria-label="Generated learning plan output">
+        <div className="section-heading">
+          <p className="eyebrow">Generated output</p>
+          <h2>Use this plan every day</h2>
+        </div>
+        <div className="reader-layout">
+          <article className="reader-main">
+            <span className="reader-kicker">Active plan</span>
+            <h3>{plan.topic}</h3>
+            <p>{plan.executiveSummary}</p>
+            <div className="reader-meta">
+              <span>{getModelById(plan.selectedModelId).name}</span>
+              <span>{generationMode === "live-model" ? "Live model generated" : "Local fallback generated"}</span>
+              <span>{storedPlanId ? "Saved to database" : "Not saved yet"}</span>
+            </div>
+          </article>
+
+          <aside className="today-card">
+            <span className="reader-kicker">Today</span>
+            <h3>{plan.dailyRoutine[0]?.ritual ?? "Start with recall"}</h3>
+            <p>{plan.dailyRoutine[0]?.output ?? "Create your first study note."}</p>
+            <button
+              className="secondary-tool-button"
+              onClick={() => void toggleChecklistItem(plan.checklist[0]?.id ?? "today", true)}
+              type="button"
+            >
+              Mark first step done
+            </button>
+          </aside>
+        </div>
+
+        <div className="reader-sections">
+          <article>
+            <h3>Action Items</h3>
+            {plan.actionItems.map((item) => (
+              <div className="reader-row" key={item.id}>
+                <span>{item.due}</span>
+                <p>
+                  <strong>{item.title}</strong>
+                  {item.owner} agent - {item.impact} impact
+                </p>
+              </div>
+            ))}
+          </article>
+
+          <article>
+            <h3>Daily Routine</h3>
+            {plan.dailyRoutine.map((routine) => (
+              <div className="reader-row" key={`${routine.timebox}-${routine.ritual}`}>
+                <span>{routine.timebox}</span>
+                <p>
+                  <strong>{routine.ritual}</strong>
+                  {routine.agent} output: {routine.output}
+                </p>
+              </div>
+            ))}
+          </article>
+
+          <article>
+            <h3>90-Day Roadmap</h3>
+            {plan.ninetyDayRoadmap.map((phase) => (
+              <div className="reader-row" key={phase.phase}>
+                <span>{phase.days}</span>
+                <p>
+                  <strong>{phase.phase}: {phase.objective}</strong>
+                  {phase.assessment}
+                </p>
+              </div>
+            ))}
+          </article>
+        </div>
+
+        <div className="reader-checklist">
+          <div>
+            <h3>Execution Checklist</h3>
+            <p>{completedCount} of {plan.checklist.length} complete. Use this as your daily control panel.</p>
+          </div>
+          <div className="reader-check-grid">
+            {plan.checklist.map((item) => (
+              <label className="compact-check" key={item.id}>
+                <input
+                  checked={Boolean(checkedItems[item.id])}
+                  onChange={(event) => void toggleChecklistItem(item.id, event.target.checked)}
+                  type="checkbox"
+                />
+                <span>{item.label}</span>
+              </label>
+            ))}
+          </div>
+        </div>
       </section>
 
       <section className="workspace" id="planner" aria-label="Learning planner">

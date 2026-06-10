@@ -203,6 +203,7 @@ h1 {
 .process-flow,
 .agent-console,
 .saved-plans,
+.plan-output,
 .tool-grid,
 .tracker-grid,
 .update-loop {
@@ -1066,13 +1067,167 @@ input[type="range"] {
   padding: 16px;
 }
 
+.plan-output {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  padding: clamp(18px, 3vw, 30px);
+}
+
+.reader-layout {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: minmax(0, 1.45fr) minmax(280px, 0.55fr);
+}
+
+.reader-main,
+.today-card,
+.reader-sections article,
+.reader-checklist {
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+}
+
+.reader-main,
+.today-card {
+  padding: clamp(18px, 3vw, 26px);
+}
+
+.reader-kicker {
+  color: var(--teal);
+  font-size: 0.78rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.reader-main h3,
+.today-card h3 {
+  font-size: clamp(1.5rem, 3vw, 2.4rem);
+  line-height: 1.08;
+  margin: 10px 0 14px;
+}
+
+.reader-main p,
+.today-card p {
+  color: var(--muted);
+  line-height: 1.65;
+}
+
+.reader-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.reader-meta span {
+  border: 1px solid var(--line);
+  color: var(--amber);
+  font-size: 0.8rem;
+  font-weight: 900;
+  padding: 8px 10px;
+}
+
+.reader-sections {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(3, 1fr);
+  margin-top: 14px;
+}
+
+.reader-sections article {
+  padding: 18px;
+}
+
+.reader-sections h3,
+.reader-checklist h3 {
+  margin-bottom: 14px;
+}
+
+.reader-row {
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 86px 1fr;
+  padding: 13px 0;
+}
+
+.reader-row:first-of-type {
+  border-top: 0;
+}
+
+.reader-row span {
+  color: var(--amber);
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.reader-row p {
+  color: var(--muted);
+  line-height: 1.45;
+  margin: 0;
+}
+
+.reader-row strong {
+  color: var(--text);
+  display: block;
+  margin-bottom: 5px;
+}
+
+.reader-checklist {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: minmax(240px, 0.45fr) 1fr;
+  margin-top: 14px;
+  padding: 18px;
+}
+
+.reader-checklist p {
+  color: var(--muted);
+  line-height: 1.5;
+  margin-bottom: 0;
+}
+
+.reader-check-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.compact-check {
+  align-items: start;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  cursor: pointer;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 20px 1fr;
+  margin: 0;
+  padding: 10px;
+}
+
+.compact-check input {
+  accent-color: var(--teal);
+  margin-top: 2px;
+  padding: 0;
+  width: 16px;
+}
+
+.compact-check span {
+  color: var(--text);
+  font-size: 0.9rem;
+  line-height: 1.35;
+}
+
 @media (max-width: 980px) {
   .hero,
   .workspace,
   .insights,
   .agent-console,
   .tool-grid,
-  .tracker-grid {
+  .tracker-grid,
+  .reader-layout,
+  .reader-checklist {
     grid-template-columns: 1fr;
   }
 
@@ -1087,7 +1242,9 @@ input[type="range"] {
   .sprint-cards,
   .model-grid,
   .update-grid,
-  .saved-plan-list {
+  .saved-plan-list,
+  .reader-sections,
+  .reader-check-grid {
     grid-template-columns: repeat(2, 1fr);
   }
 }
@@ -1106,7 +1263,7 @@ input[type="range"] {
 
   .nav-actions {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(2, 1fr);
   }
 
   .console-controls,
@@ -1132,7 +1289,9 @@ input[type="range"] {
   .sprint-cards,
   .model-grid,
   .update-grid,
-  .saved-plan-list {
+  .saved-plan-list,
+  .reader-sections,
+  .reader-check-grid {
     grid-template-columns: 1fr;
   }
 
