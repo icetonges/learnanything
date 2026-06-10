@@ -15,6 +15,23 @@ type AgentTrace = {
   status: "completed" | "fallback";
   note: string;
 };
+type StoredPlanSummary = {
+  id: string;
+  topic: string;
+  outcome: string;
+  level: Level;
+  hours_per_week: number;
+  model_id: string;
+  mode: "live-model" | "local-planner";
+  plan: LearningPlan;
+  created_at: string;
+};
+type TrackerEvent = {
+  item_id: string;
+  item_type: string;
+  status: string;
+  created_at: string;
+};
 
 const processSteps = ["Diagnose", "Compress", "Explain", "Drill", "Build", "Defend"];
 
@@ -46,6 +63,8 @@ export default function Home() {
   const [generationMode, setGenerationMode] = useState<"live-model" | "local-planner">("local-planner");
   const [storedPlanId, setStoredPlanId] = useState<string | null>(null);
   const [databaseStatus, setDatabaseStatus] = useState<"saved" | "not-configured" | "error">("not-configured");
+  const [savedPlans, setSavedPlans] = useState<StoredPlanSummary[]>([]);
+  const [savedPlansStatus, setSavedPlansStatus] = useState<"idle" | "loading" | "connected" | "not-configured" | "error">("idle");
   const [gapAnalysis, setGapAnalysis] = useState<GapAnalysis | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState("");
@@ -57,13 +76,92 @@ export default function Home() {
   const completionPercent = Math.round((completedCount / Math.max(plan.checklist.length, 1)) * 100);
 
   useEffect(() => {
+    if (storedPlanId) {
+      return;
+    }
+
     const stored = window.localStorage.getItem(`learnanything:${plan.topic}:checklist`);
     setCheckedItems(stored ? (JSON.parse(stored) as Record<string, boolean>) : {});
-  }, [plan.topic]);
+  }, [plan.topic, storedPlanId]);
 
   useEffect(() => {
+    if (storedPlanId) {
+      return;
+    }
+
     window.localStorage.setItem(`learnanything:${plan.topic}:checklist`, JSON.stringify(checkedItems));
-  }, [checkedItems, plan.topic]);
+  }, [checkedItems, plan.topic, storedPlanId]);
+
+  useEffect(() => {
+    void loadSavedPlans();
+  }, []);
+
+  function applyTrackerEvents(events: TrackerEvent[]) {
+    const next: Record<string, boolean> = {};
+    const seen = new Set<string>();
+
+    for (const event of events) {
+      if (event.item_type !== "checklist" || seen.has(event.item_id)) {
+        continue;
+      }
+
+      seen.add(event.item_id);
+      next[event.item_id] = event.status === "completed";
+    }
+
+    setCheckedItems(next);
+  }
+
+  async function loadSavedPlans() {
+    setSavedPlansStatus("loading");
+
+    try {
+      const response = await fetch("/api/plans");
+      const payload = (await response.json()) as {
+        plans?: StoredPlanSummary[];
+        database?: "connected" | "not-configured" | "error";
+      };
+
+      setSavedPlans(payload.plans ?? []);
+      setSavedPlansStatus(payload.database ?? "error");
+    } catch {
+      setSavedPlansStatus("error");
+    }
+  }
+
+  async function openStoredPlan(planId: string) {
+    setError("");
+
+    try {
+      const [planResponse, trackerResponse] = await Promise.all([
+        fetch(`/api/plans/${planId}`),
+        fetch(`/api/plans/${planId}/tracker`)
+      ]);
+      const planPayload = (await planResponse.json()) as { plan?: StoredPlanSummary; error?: string };
+      const trackerPayload = (await trackerResponse.json()) as { events?: TrackerEvent[] };
+
+      if (!planResponse.ok || !planPayload.plan) {
+        throw new Error(planPayload.error ?? "Could not load saved plan.");
+      }
+
+      const stored = planPayload.plan;
+      setPlan(stored.plan);
+      setTopic(stored.topic);
+      setOutcome(stored.outcome);
+      setLevel(stored.level);
+      setHoursPerWeek(stored.hours_per_week);
+      setModelId(stored.model_id);
+      setGenerationMode(stored.mode);
+      setStoredPlanId(stored.id);
+      setDatabaseStatus("saved");
+      setGapAnalysis(null);
+      setSelectedPhase(0);
+      applyTrackerEvents(trackerPayload.events ?? []);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Could not load saved plan.");
+      setDatabaseStatus("error");
+    }
+  }
 
   async function generatePlan() {
     setIsGenerating(true);
@@ -112,6 +210,7 @@ export default function Home() {
       setGapAnalysis(null);
       setSelectedPhase(0);
       setCheckedItems({});
+      void loadSavedPlans();
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Could not generate plan.");
     } finally {
@@ -283,6 +382,39 @@ export default function Home() {
               <p>{trace.note}</p>
             </div>
           ))}
+        </div>
+      </section>
+
+      <section className="saved-plans" aria-label="Saved learning plans">
+        <div className="section-heading compact">
+          <p className="eyebrow">Saved plans</p>
+          <h2>Open a stored roadmap and continue tracking</h2>
+        </div>
+        <div className="saved-plans-toolbar">
+          <span>Database: {savedPlansStatus}</span>
+          <button className="secondary-tool-button" onClick={() => void loadSavedPlans()} type="button">
+            Refresh saved plans
+          </button>
+        </div>
+        <div className="saved-plan-list">
+          {savedPlans.length ? (
+            savedPlans.map((stored) => (
+              <button
+                className={storedPlanId === stored.id ? "saved-plan-card active" : "saved-plan-card"}
+                key={stored.id}
+                onClick={() => void openStoredPlan(stored.id)}
+                type="button"
+              >
+                <strong>{stored.topic}</strong>
+                <span>{new Date(stored.created_at).toLocaleString()}</span>
+                <p>{stored.outcome}</p>
+              </button>
+            ))
+          ) : (
+            <div className="empty-state">
+              Generate a plan with database env configured, then it will appear here for reuse.
+            </div>
+          )}
         </div>
       </section>
 
