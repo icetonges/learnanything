@@ -2,67 +2,79 @@
 
 import Image from "next/image";
 import { useMemo, useState } from "react";
+import type { LearningPlan, PlanRequest } from "@/lib/learning-engine";
+import { createLearningPlan } from "@/lib/learning-engine";
+import { DEFAULT_MODEL_ID, getModelById, MODELS } from "@/lib/models";
 
 type Theme = "dark" | "light";
-type Intensity = "Focused" | "Balanced" | "Accelerated";
-
-const modelChain = [
-  { name: "Gemini", role: "Map broad domains", color: "#7bdff2", load: 86 },
-  { name: "Groq", role: "Drill fast recall", color: "#f7b267", load: 72 },
-  { name: "DeepSeek", role: "Solve hard problems", color: "#b8f2e6", load: 64 },
-  { name: "Claude", role: "Coach reflection", color: "#f79d84", load: 78 }
-];
-
-const weeklyRhythm = [
-  { day: "Mon", topic: "Concept map", minutes: 55, score: 72 },
-  { day: "Tue", topic: "Guided lesson", minutes: 70, score: 81 },
-  { day: "Wed", topic: "Practice lab", minutes: 80, score: 76 },
-  { day: "Thu", topic: "Teach-back", minutes: 45, score: 88 },
-  { day: "Fri", topic: "Challenge set", minutes: 65, score: 84 },
-  { day: "Sat", topic: "Project block", minutes: 95, score: 91 },
-  { day: "Sun", topic: "Review loop", minutes: 35, score: 86 }
-];
-
-const milestones = [
-  { week: "01-02", label: "Orientation", detail: "Scope the field, diagnose gaps, build vocabulary." },
-  { week: "03-04", label: "Foundation", detail: "Core principles, annotated examples, daily retrieval." },
-  { week: "05-08", label: "Fluency", detail: "Problem sets, case studies, feedback from model chain." },
-  { week: "09-11", label: "Application", detail: "Capstone build, peer-grade rubrics, synthesis notes." },
-  { week: "12-13", label: "Mastery", detail: "Final project, oral defense, long-term memory schedule." }
-];
+type Level = PlanRequest["level"];
 
 const processSteps = [
-  "Intake",
-  "Knowledge graph",
-  "Model chain",
-  "Practice loops",
-  "Milestones",
-  "Mastery proof"
+  "Diagnose",
+  "Compress",
+  "Explain",
+  "Drill",
+  "Build",
+  "Defend"
 ];
 
-function buildPlan(topic: string, intensity: Intensity) {
-  const multiplier = intensity === "Focused" ? 0.85 : intensity === "Accelerated" ? 1.25 : 1;
-  return {
-    hours: Math.round(82 * multiplier),
-    daily: Math.round(48 * multiplier),
-    capstone: `${topic || "Your topic"} mastery portfolio`,
-    monthly: [
-      `Month 1: build a precise mental model for ${topic || "the subject"}`,
-      "Month 2: convert concepts into drills, explanations, and projects",
-      "Month 3: prove transfer with capstone work and spaced retention"
-    ]
-  };
-}
+const starterPlan = createLearningPlan({
+  topic: "Federal financial management",
+  outcome: "Become job-ready and able to explain, analyze, and build useful AI tools with confidence.",
+  level: "Intermediate",
+  hoursPerWeek: 10,
+  modelId: DEFAULT_MODEL_ID
+});
 
 export default function Home() {
   const [theme, setTheme] = useState<Theme>("dark");
-  const [topic, setTopic] = useState("Federal financial management");
-  const [goal, setGoal] = useState("Become job-ready and able to explain, analyze, and build with confidence.");
-  const [intensity, setIntensity] = useState<Intensity>("Balanced");
-  const [selectedMonth, setSelectedMonth] = useState(1);
+  const [topic, setTopic] = useState(starterPlan.topic);
+  const [outcome, setOutcome] = useState(starterPlan.outcome);
+  const [level, setLevel] = useState<Level>("Intermediate");
+  const [hoursPerWeek, setHoursPerWeek] = useState(10);
+  const [modelId, setModelId] = useState(DEFAULT_MODEL_ID);
+  const [selectedPhase, setSelectedPhase] = useState(0);
+  const [plan, setPlan] = useState<LearningPlan>(starterPlan);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [error, setError] = useState("");
 
-  const plan = useMemo(() => buildPlan(topic, intensity), [topic, intensity]);
-  const progress = selectedMonth === 1 ? 32 : selectedMonth === 2 ? 63 : 91;
+  const selectedModel = useMemo(() => getModelById(modelId), [modelId]);
+  const activePhase = plan.ninetyDayRoadmap[selectedPhase] ?? plan.ninetyDayRoadmap[0];
+  const weeklyMax = Math.max(...plan.weeklyOperatingSystem.map((day) => day.minutes));
+
+  async function generatePlan() {
+    setIsGenerating(true);
+    setError("");
+
+    try {
+      const response = await fetch("/api/plan", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          topic,
+          outcome,
+          level,
+          hoursPerWeek,
+          modelId
+        })
+      });
+
+      const payload = (await response.json()) as { plan?: LearningPlan; error?: string };
+
+      if (!response.ok || !payload.plan) {
+        throw new Error(payload.error ?? "Could not generate plan.");
+      }
+
+      setPlan(payload.plan);
+      setSelectedPhase(0);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Could not generate plan.");
+    } finally {
+      setIsGenerating(false);
+    }
+  }
 
   return (
     <main className={`shell ${theme}`}>
@@ -72,8 +84,8 @@ export default function Home() {
           <span>LearnAnything AI</span>
         </a>
         <div className="nav-actions">
-          <a href="#chain">Models</a>
-          <a href="#roadmap">Roadmap</a>
+          <a href="#sprint">20h sprint</a>
+          <a href="#agents">Agents</a>
           <button className="theme-toggle" onClick={() => setTheme(theme === "dark" ? "light" : "dark")} type="button">
             {theme === "dark" ? "Light" : "Dark"}
           </button>
@@ -82,14 +94,14 @@ export default function Home() {
 
       <section className="hero" aria-labelledby="hero-title">
         <div className="hero-copy">
-          <p className="eyebrow">AI-native learning operating system</p>
-          <h1 id="hero-title">Master any knowledge with a living 90-day plan.</h1>
+          <p className="eyebrow">AI agent learning studio</p>
+          <h1 id="hero-title">Learn anything in 20 hours. Master it in 90 days.</h1>
           <p>
-            Turn a topic into milestones, weekly practice loops, model-assisted coaching, charts, and a final proof of mastery.
+            Use AI agents to compress a topic, teach it back, drill weak spots, build artifacts, and defend mastery with measurable proof.
           </p>
           <div className="hero-actions">
-            <a className="primary-action" href="#planner">Build my plan</a>
-            <a className="secondary-action" href="#roadmap">View roadmap</a>
+            <a className="primary-action" href="#planner">Generate learning system</a>
+            <a className="secondary-action" href="#models">Tune model chain</a>
           </div>
         </div>
         <div className="hero-art" aria-label="AI learning cockpit visualization">
@@ -104,88 +116,72 @@ export default function Home() {
       </section>
 
       <section className="metrics" aria-label="Plan summary">
-        <div>
-          <span>{plan.hours}</span>
-          <p>guided hours</p>
-        </div>
-        <div>
-          <span>{plan.daily}m</span>
-          <p>daily target</p>
-        </div>
-        <div>
-          <span>13</span>
-          <p>weekly sprints</p>
-        </div>
-        <div>
-          <span>{progress}%</span>
-          <p>current mastery</p>
-        </div>
+        {plan.metrics.map((metric) => (
+          <div key={metric.label}>
+            <span>
+              {metric.value}
+              {metric.unit === "%" ? "%" : ""}
+            </span>
+            <p>{metric.label}</p>
+          </div>
+        ))}
       </section>
 
       <section className="workspace" id="planner" aria-label="Learning planner">
         <div className="planner-panel">
           <div className="section-heading">
-            <p className="eyebrow">Plan generator</p>
-            <h2>Personalized learning command center</h2>
+            <p className="eyebrow">Control room</p>
+            <h2>Build the agent-assisted learning contract</h2>
           </div>
           <label>
             Knowledge target
             <input value={topic} onChange={(event) => setTopic(event.target.value)} />
           </label>
           <label>
-            Outcome
-            <textarea value={goal} onChange={(event) => setGoal(event.target.value)} rows={4} />
+            Mastery outcome
+            <textarea value={outcome} onChange={(event) => setOutcome(event.target.value)} rows={4} />
           </label>
-          <div className="segmented" role="group" aria-label="Plan intensity">
-            {(["Focused", "Balanced", "Accelerated"] as const).map((level) => (
-              <button
-                className={intensity === level ? "active" : ""}
-                key={level}
-                onClick={() => setIntensity(level)}
-                type="button"
-              >
-                {level}
-              </button>
-            ))}
-          </div>
-          <div className="generated-plan">
-            <strong>AI objective</strong>
-            <p>{goal}</p>
-            <strong>Capstone</strong>
-            <p>{plan.capstone}</p>
-          </div>
+          <label>
+            Starting level
+            <select value={level} onChange={(event) => setLevel(event.target.value as Level)}>
+              <option>Beginner</option>
+              <option>Intermediate</option>
+              <option>Advanced</option>
+            </select>
+          </label>
+          <label>
+            Weekly learning load: {hoursPerWeek} hours
+            <input
+              min="3"
+              max="30"
+              onChange={(event) => setHoursPerWeek(Number(event.target.value))}
+              type="range"
+              value={hoursPerWeek}
+            />
+          </label>
+          <button className="generate-button" disabled={isGenerating} onClick={generatePlan} type="button">
+            {isGenerating ? "Generating..." : "Generate 20h + 90d plan"}
+          </button>
+          {error ? <p className="error-message">{error}</p> : null}
         </div>
 
         <div className="dashboard-panel">
           <div className="section-heading compact">
-            <p className="eyebrow">90-day roadmap</p>
-            <h2>{topic || "Choose a topic"}</h2>
+            <p className="eyebrow">Mastery system</p>
+            <h2>{plan.topic}</h2>
           </div>
-          <div className="month-tabs" role="tablist" aria-label="Roadmap month">
-            {[1, 2, 3].map((month) => (
-              <button
-                aria-selected={selectedMonth === month}
-                className={selectedMonth === month ? "active" : ""}
-                key={month}
-                onClick={() => setSelectedMonth(month)}
-                role="tab"
-                type="button"
-              >
-                Month {month}
-              </button>
-            ))}
+          <div className="radial" style={{ "--progress": `${plan.masteryScore}%` } as React.CSSProperties}>
+            <span>{plan.masteryScore}%</span>
+            <p>90-day readiness target</p>
           </div>
-          <div className="radial" style={{ "--progress": `${progress}%` } as React.CSSProperties}>
-            <span>{progress}%</span>
-            <p>mastery confidence</p>
-          </div>
-          <div className="monthly-plan">
-            {plan.monthly.map((item, index) => (
-              <div className={selectedMonth === index + 1 ? "active" : ""} key={item}>
-                <span>{String(index + 1).padStart(2, "0")}</span>
-                <p>{item}</p>
-              </div>
-            ))}
+          <div className="generated-plan">
+            <strong>Outcome</strong>
+            <p>{plan.outcome}</p>
+            <strong>Model route</strong>
+            <p>
+              Default synthesis: {getModelById(plan.selectedModelId).name}. Estimated orchestration cost: $
+              {plan.estimatedCost.toFixed(2)} per full planning cycle.
+            </p>
           </div>
         </div>
       </section>
@@ -199,20 +195,41 @@ export default function Home() {
         ))}
       </section>
 
-      <section className="insights" id="chain">
+      <section className="sprint-grid" id="sprint" aria-label="20 hour learning sprint">
+        <div className="section-heading">
+          <p className="eyebrow">20-hour sprint</p>
+          <h2>Fast competence before deep mastery</h2>
+        </div>
+        <div className="sprint-cards">
+          {plan.twentyHourSprint.map((block) => (
+            <article key={block.block}>
+              <span>{block.block}</span>
+              <h3>{block.goal}</h3>
+              <ul>
+                {block.exercises.map((exercise) => (
+                  <li key={exercise}>{exercise}</li>
+                ))}
+              </ul>
+              <p>{block.proof}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="insights" id="agents">
         <div className="chart-panel">
           <div className="section-heading compact">
-            <p className="eyebrow">Weekly plan</p>
-            <h2>Practice load and confidence</h2>
+            <p className="eyebrow">Weekly operating system</p>
+            <h2>Study load becomes outputs</h2>
           </div>
           <div className="bar-chart" aria-label="Weekly study minutes chart">
-            {weeklyRhythm.map((day) => (
+            {plan.weeklyOperatingSystem.map((day) => (
               <div key={day.day} className="bar-wrap">
-                <div className="bar" style={{ height: `${day.minutes}%` }}>
+                <div className="bar" style={{ height: `${Math.max(18, (day.minutes / weeklyMax) * 100)}%` }}>
                   <span>{day.minutes}m</span>
                 </div>
                 <strong>{day.day}</strong>
-                <small>{day.topic}</small>
+                <small>{day.focus}</small>
               </div>
             ))}
           </div>
@@ -220,35 +237,85 @@ export default function Home() {
 
         <div className="model-panel">
           <div className="section-heading compact">
-            <p className="eyebrow">LLM chain</p>
-            <h2>Specialist model routing</h2>
+            <p className="eyebrow">Agent chain</p>
+            <h2>Specialists that facilitate learning</h2>
           </div>
-          {modelChain.map((model) => (
-            <div className="model-row" key={model.name}>
-              <div>
-                <strong>{model.name}</strong>
-                <p>{model.role}</p>
+          {plan.agentChain.map((agent) => {
+            const model = getModelById(agent.modelId);
+            return (
+              <div className="model-row" key={agent.agent}>
+                <div className="agent-title">
+                  <strong>{agent.agent}</strong>
+                  <span style={{ borderColor: model.providerColor }}>{model.name}</span>
+                </div>
+                <p>{agent.mission}</p>
+                <small>{agent.deliverable}</small>
               </div>
-              <div className="model-meter" aria-label={`${model.name} load ${model.load}%`}>
-                <span style={{ width: `${model.load}%`, background: model.color }} />
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </section>
 
-      <section className="roadmap" id="roadmap" aria-label="Milestones">
+      <section className="roadmap" id="roadmap" aria-label="90 day roadmap">
         <div className="section-heading">
-          <p className="eyebrow">Milestones</p>
-          <h2>From curiosity to durable capability</h2>
+          <p className="eyebrow">90-day mastery</p>
+          <h2>Three phases with proof gates</h2>
         </div>
-        <div className="timeline">
-          {milestones.map((item) => (
-            <article key={item.label}>
-              <span>Week {item.week}</span>
-              <h3>{item.label}</h3>
-              <p>{item.detail}</p>
-            </article>
+        <div className="month-tabs phase-tabs" role="tablist" aria-label="Roadmap phase">
+          {plan.ninetyDayRoadmap.map((phase, index) => (
+            <button
+              aria-selected={selectedPhase === index}
+              className={selectedPhase === index ? "active" : ""}
+              key={phase.phase}
+              onClick={() => setSelectedPhase(index)}
+              role="tab"
+              type="button"
+            >
+              {phase.phase}
+            </button>
+          ))}
+        </div>
+        <div className="phase-detail">
+          <span>{activePhase.days}</span>
+          <h3>{activePhase.objective}</h3>
+          <div>
+            {activePhase.milestones.map((milestone) => (
+              <p key={milestone}>{milestone}</p>
+            ))}
+          </div>
+          <strong>{activePhase.assessment}</strong>
+        </div>
+      </section>
+
+      <section className="models" id="models" aria-label="Model configuration">
+        <div className="section-heading">
+          <p className="eyebrow">Model economics</p>
+          <h2>Choose the default brain for planning and evaluation</h2>
+        </div>
+        <div className="selected-model">
+          <strong>{selectedModel.name}</strong>
+          <p>{selectedModel.description}</p>
+          <span>
+            {selectedModel.contextWindow} context · ${selectedModel.inputPricePer1M}/M in · $
+            {selectedModel.outputPricePer1M}/M out
+          </span>
+        </div>
+        <div className="model-grid">
+          {MODELS.map((model) => (
+            <button
+              className={modelId === model.id ? "model-card active" : "model-card"}
+              key={model.id}
+              onClick={() => setModelId(model.id)}
+              type="button"
+            >
+              <span style={{ background: model.providerColor }}>{model.providerLabel ?? model.provider}</span>
+              <strong>{model.name}</strong>
+              <p>{model.description}</p>
+              <small>
+                {model.isFree ? "Free tier" : `$${model.inputPricePer1M}/M in`} · {model.contextWindow}
+              </small>
+              {model.badge ? <em>{model.badge}</em> : null}
+            </button>
           ))}
         </div>
       </section>
