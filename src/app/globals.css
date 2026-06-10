@@ -747,6 +747,61 @@ input[type="range"] {
   top: 12px;
 }
 
+.app-workbench {
+  align-items: start;
+  display: grid;
+  gap: 18px;
+  grid-template-columns: minmax(320px, 0.72fr) minmax(0, 1.28fr);
+  max-width: 1240px;
+  margin: 0 auto;
+}
+
+.control-column {
+  display: grid;
+  gap: 18px;
+  position: sticky;
+  top: 96px;
+}
+
+.tool-intro {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  padding: clamp(18px, 3vw, 30px);
+}
+
+.tool-intro h1 {
+  font-size: clamp(2rem, 4vw, 3.9rem);
+  line-height: 0.98;
+  margin-bottom: 18px;
+}
+
+.tool-intro p:not(.eyebrow) {
+  color: var(--muted);
+  line-height: 1.6;
+  margin-bottom: 0;
+}
+
+.control-column .saved-plans {
+  margin: 0;
+  max-width: none;
+}
+
+.control-column .saved-plan-list {
+  grid-template-columns: 1fr;
+  max-height: 360px;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.control-column .saved-plan-card {
+  min-height: 118px;
+}
+
+.app-workbench .plan-output {
+  margin: 0;
+}
+
 .console-main,
 .agent-run,
 .action-panel,
@@ -1248,8 +1303,13 @@ input[type="range"] {
   .tool-grid,
   .tracker-grid,
   .reader-layout,
-  .reader-checklist {
+  .reader-checklist,
+  .app-workbench {
     grid-template-columns: 1fr;
+  }
+
+  .control-column {
+    position: static;
   }
 
   .hero-copy,

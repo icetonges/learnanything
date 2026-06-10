@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import type { LearningPlan, PlanRequest } from "@/lib/learning-engine";
 import { createLearningPlan, deriveTopicFromPrompt } from "@/lib/learning-engine";
@@ -9,12 +8,6 @@ import type { GapAnalysis } from "@/lib/analysis";
 
 type Theme = "dark" | "light";
 type Level = PlanRequest["level"];
-type AgentTrace = {
-  agent: string;
-  modelId: string;
-  status: "completed" | "fallback";
-  note: string;
-};
 type StoredPlanSummary = {
   id: string;
   topic: string;
@@ -32,8 +25,6 @@ type TrackerEvent = {
   status: string;
   created_at: string;
 };
-
-const processSteps = ["Diagnose", "Compress", "Explain", "Drill", "Build", "Defend"];
 
 const starterPlan = createLearningPlan({
   topic: "Your learning goal",
@@ -53,10 +44,8 @@ export default function Home() {
   const [level, setLevel] = useState<Level>("Intermediate");
   const [hoursPerWeek, setHoursPerWeek] = useState(10);
   const [modelId, setModelId] = useState(DEFAULT_MODEL_ID);
-  const [selectedPhase, setSelectedPhase] = useState(0);
   const [plan, setPlan] = useState<LearningPlan>(starterPlan);
   const [checkedItems, setCheckedItems] = useState<Record<string, boolean>>({});
-  const [agentTrace, setAgentTrace] = useState<AgentTrace[]>([]);
   const [generationMode, setGenerationMode] = useState<"live-model" | "local-planner">("local-planner");
   const [storedPlanId, setStoredPlanId] = useState<string | null>(null);
   const [databaseStatus, setDatabaseStatus] = useState<"saved" | "not-configured" | "error">("not-configured");
@@ -67,8 +56,6 @@ export default function Home() {
   const [error, setError] = useState("");
 
   const selectedModel = useMemo(() => getModelById(modelId), [modelId]);
-  const activePhase = plan.ninetyDayRoadmap[selectedPhase] ?? plan.ninetyDayRoadmap[0];
-  const weeklyMax = Math.max(...plan.weeklyOperatingSystem.map((day) => day.minutes));
   const completedCount = plan.checklist.filter((item) => checkedItems[item.id]).length;
   const completionPercent = Math.round((completedCount / Math.max(plan.checklist.length, 1)) * 100);
 
@@ -151,7 +138,6 @@ export default function Home() {
       setStoredPlanId(stored.id);
       setDatabaseStatus("saved");
       setGapAnalysis(null);
-      setSelectedPhase(0);
       applyTrackerEvents(trackerPayload.events ?? []);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Could not load saved plan.");
@@ -170,14 +156,6 @@ export default function Home() {
 
     setIsGenerating(true);
     setError("");
-    setAgentTrace(
-      plan.agentChain.map((agent) => ({
-          agent: agent.agent,
-          modelId: agent.modelId,
-          status: "fallback",
-        note: `${agent.agent} queued for ${getModelById(agent.modelId).name}.`
-      }))
-    );
 
     try {
       const response = await fetch("/api/plan", {
@@ -197,7 +175,6 @@ export default function Home() {
         plan?: LearningPlan;
         error?: string;
         mode?: "live-model" | "local-planner";
-        agentTrace?: AgentTrace[];
         storedPlanId?: string | null;
         database?: "saved" | "not-configured" | "error";
       };
@@ -207,12 +184,10 @@ export default function Home() {
       }
 
       setPlan(payload.plan);
-      setAgentTrace(payload.agentTrace ?? []);
       setGenerationMode(payload.mode ?? "local-planner");
       setStoredPlanId(payload.storedPlanId ?? null);
       setDatabaseStatus(payload.database ?? "not-configured");
       setGapAnalysis(null);
-      setSelectedPhase(0);
       setCheckedItems({});
       void loadSavedPlans();
     } catch (caught) {
@@ -272,47 +247,32 @@ export default function Home() {
   return (
     <main className={`shell ${theme}`}>
       <nav className="topbar" aria-label="Primary navigation">
-        <a className="brand" href="#planner" aria-label="LearnAnything AI home">
+        <a className="brand" href="#console" aria-label="LearnAnything AI home">
           <span className="brand-mark">LA</span>
           <span>LearnAnything AI</span>
         </a>
         <div className="nav-actions">
           <a href="#plan-output">Plan</a>
           <a href="#console">Chatbox</a>
-          <a href="#tracker">Tracker</a>
           <button className="theme-toggle" onClick={() => setTheme(theme === "dark" ? "light" : "dark")} type="button">
             {theme === "dark" ? "Light" : "Dark"}
           </button>
         </div>
       </nav>
 
-      <section className="hero" aria-labelledby="hero-title">
-        <div className="hero-copy">
-          <p className="eyebrow">AI study-plan creator</p>
-          <h1 id="hero-title">Ask for any topic. Get a usable study plan.</h1>
-          <p>
-            Type your learning goal into the chatbox. The planner agent creates a comprehensive daily-use plan with lessons, actions, projects, progress tracking, and gap identification.
-          </p>
-          <div className="hero-actions">
-            <a className="primary-action" href="#console">Generate plan</a>
-            <a className="secondary-action" href="#models">Model chain</a>
+      <section className="app-workbench" aria-label="Study plan creator workspace">
+        <aside className="control-column" id="console">
+          <div className="tool-intro">
+            <p className="eyebrow">AI study-plan creator</p>
+            <h1>Ask for any topic. Get a usable study plan.</h1>
+            <p>
+              The planner agent creates a daily-use plan with lessons, actions, projects, checkpoints, progress tracking, and gap identification.
+            </p>
           </div>
-        </div>
-        <div className="hero-art" aria-label="AI learning cockpit visualization">
-          <Image
-            src="/assets/ai-learning-cockpit.png"
-            alt="A futuristic AI learning cockpit with plans, charts, and knowledge maps."
-            fill
-            priority
-            sizes="(max-width: 900px) 100vw, 48vw"
-          />
-        </div>
-      </section>
 
-      <section className="agent-console" id="console" aria-label="AI agent console">
-        <div className="console-main">
-          <p className="eyebrow">AI chatbox</p>
-          <h2>What do you want to learn?</h2>
+          <div className="console-main">
+            <p className="eyebrow">AI chatbox</p>
+            <h2>What do you want to learn?</h2>
           <label>
             Study-plan request
             <textarea
@@ -369,445 +329,181 @@ export default function Home() {
             {storedPlanId ? <code>{storedPlanId}</code> : null}
           </div>
           {error ? <p className="error-message">{error}</p> : null}
-        </div>
+          </div>
 
-        <div className="agent-run">
-          <p className="eyebrow">Agent run</p>
-          {(agentTrace.length
-            ? agentTrace
-            : plan.agentChain.map((agent) => ({
-                agent: agent.agent,
-                modelId: agent.modelId,
-                status: "fallback" as const,
-                note: `${agent.agent} is ready to run through ${getModelById(agent.modelId).name}.`
-              }))
-          ).map((trace) => (
-            <div className="trace-row" key={trace.agent}>
-              <strong>{trace.agent}</strong>
-              <span>{getModelById(trace.modelId).name}</span>
-              <p>{trace.note}</p>
+          <div className="saved-plans" aria-label="Saved learning plans">
+            <div className="section-heading compact">
+              <p className="eyebrow">Saved plans</p>
+              <h2>Continue tracking</h2>
             </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="saved-plans" aria-label="Saved learning plans">
-        <div className="section-heading compact">
-          <p className="eyebrow">Saved plans</p>
-          <h2>Open a stored roadmap and continue tracking</h2>
-        </div>
-        <div className="saved-plans-toolbar">
-          <span>Database: {savedPlansStatus}</span>
-          <button className="secondary-tool-button" onClick={() => void loadSavedPlans()} type="button">
-            Refresh saved plans
-          </button>
-        </div>
-        <div className="saved-plan-list">
-          {savedPlans.length ? (
-            savedPlans.map((stored) => (
-              <button
-                className={storedPlanId === stored.id ? "saved-plan-card active" : "saved-plan-card"}
-                key={stored.id}
-                onClick={() => void openStoredPlan(stored.id)}
-                type="button"
-              >
-                <strong>{stored.topic}</strong>
-                <span>{new Date(stored.created_at).toLocaleString()}</span>
-                <p>{stored.outcome}</p>
+            <div className="saved-plans-toolbar">
+              <span>Database: {savedPlansStatus}</span>
+              <button className="secondary-tool-button" onClick={() => void loadSavedPlans()} type="button">
+                Refresh
               </button>
-            ))
+            </div>
+            <div className="saved-plan-list">
+              {savedPlans.length ? (
+                savedPlans.map((stored) => (
+                  <button
+                    className={storedPlanId === stored.id ? "saved-plan-card active" : "saved-plan-card"}
+                    key={stored.id}
+                    onClick={() => void openStoredPlan(stored.id)}
+                    type="button"
+                  >
+                    <strong>{stored.topic}</strong>
+                    <span>{new Date(stored.created_at).toLocaleString()}</span>
+                    <p>{stored.outcome}</p>
+                  </button>
+                ))
+              ) : (
+                <div className="empty-state">Saved plans will appear here after generation.</div>
+              )}
+            </div>
+          </div>
+        </aside>
+
+        <section className="plan-output" id="plan-output" aria-label="Generated learning plan output">
+          <div className="section-heading">
+            <p className="eyebrow">Generated study plan</p>
+            <h2>{plan.topic === "Your learning goal" ? "Your plan will appear here" : plan.topic}</h2>
+          </div>
+          {plan.topic === "Your learning goal" ? (
+            <div className="plan-placeholder">
+              <strong>No plan generated yet.</strong>
+              <p>
+                Enter a learning goal in the chatbox. The generated response will render here as a readable plan you can follow and track.
+              </p>
+            </div>
           ) : (
-            <div className="empty-state">
-              Generate a plan with database env configured, then it will appear here for reuse.
-            </div>
-          )}
-        </div>
-      </section>
-
-      <section className="metrics" aria-label="Plan summary">
-        {plan.metrics.map((metric) => (
-          <div key={metric.label}>
-            <span>
-              {metric.value}
-              {metric.unit === "%" ? "%" : ""}
-            </span>
-            <p>{metric.label}</p>
-          </div>
-        ))}
-      </section>
-
-      <section className="plan-output" id="plan-output" aria-label="Generated learning plan output">
-        <div className="section-heading">
-          <p className="eyebrow">Generated study plan</p>
-          <h2>{plan.topic === "Your learning goal" ? "Your plan will appear here" : "Use this plan every day"}</h2>
-        </div>
-        {plan.topic === "Your learning goal" ? (
-          <div className="plan-placeholder">
-            <strong>No plan generated yet.</strong>
-            <p>
-              Use the AI chatbox above to ask for a study plan. The generated response will render here as a readable daily plan with action items, routine, roadmap, checklist, tracker, and gap-analysis controls.
-            </p>
-          </div>
-        ) : null}
-        <div className="reader-layout">
-          <article className="reader-main">
-            <span className="reader-kicker">Active plan</span>
-            <h3>{plan.topic}</h3>
-            <p>{plan.executiveSummary}</p>
-            <div className="reader-meta">
-              <span>{getModelById(plan.selectedModelId).name}</span>
-              <span>{generationMode === "live-model" ? "Live model generated" : "Local fallback generated"}</span>
-              <span>{storedPlanId ? "Saved to database" : "Not saved yet"}</span>
-            </div>
-          </article>
-
-          <aside className="today-card">
-            <span className="reader-kicker">Today</span>
-            <h3>{plan.dailyRoutine[0]?.ritual ?? "Start with recall"}</h3>
-            <p>{plan.dailyRoutine[0]?.output ?? "Create your first study note."}</p>
-            <button
-              className="secondary-tool-button"
-              onClick={() => void toggleChecklistItem(plan.checklist[0]?.id ?? "today", true)}
-              type="button"
-            >
-              Mark first step done
-            </button>
-          </aside>
-        </div>
-
-        <div className="reader-sections">
-          <article>
-            <h3>Action Items</h3>
-            {plan.actionItems.map((item) => (
-              <div className="reader-row" key={item.id}>
-                <span>{item.due}</span>
-                <p>
-                  <strong>{item.title}</strong>
-                  {item.owner} agent - {item.impact} impact
-                </p>
-              </div>
-            ))}
-          </article>
-
-          <article>
-            <h3>Daily Routine</h3>
-            {plan.dailyRoutine.map((routine) => (
-              <div className="reader-row" key={`${routine.timebox}-${routine.ritual}`}>
-                <span>{routine.timebox}</span>
-                <p>
-                  <strong>{routine.ritual}</strong>
-                  {routine.agent} output: {routine.output}
-                </p>
-              </div>
-            ))}
-          </article>
-
-          <article>
-            <h3>90-Day Roadmap</h3>
-            {plan.ninetyDayRoadmap.map((phase) => (
-              <div className="reader-row" key={phase.phase}>
-                <span>{phase.days}</span>
-                <p>
-                  <strong>{phase.phase}: {phase.objective}</strong>
-                  {phase.assessment}
-                </p>
-              </div>
-            ))}
-          </article>
-        </div>
-
-        <div className="reader-checklist">
-          <div>
-            <h3>Execution Checklist</h3>
-            <p>{completedCount} of {plan.checklist.length} complete. Use this as your daily control panel.</p>
-          </div>
-          <div className="reader-check-grid">
-            {plan.checklist.map((item) => (
-              <label className="compact-check" key={item.id}>
-                <input
-                  checked={Boolean(checkedItems[item.id])}
-                  onChange={(event) => void toggleChecklistItem(item.id, event.target.checked)}
-                  type="checkbox"
-                />
-                <span>{item.label}</span>
-              </label>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="workspace" id="planner" aria-label="Learning planner">
-        <div className="planner-panel">
-          <div className="section-heading compact">
-            <p className="eyebrow">Generated system</p>
-            <h2>{plan.topic}</h2>
-          </div>
-          <div className="generated-plan">
-            <strong>Agent summary</strong>
-            <p>{plan.executiveSummary}</p>
-            <strong>Outcome</strong>
-            <p>{plan.outcome}</p>
-            <strong>Model route</strong>
-            <p>
-              Default synthesis: {getModelById(plan.selectedModelId).name}. Estimated orchestration cost: $
-              {plan.estimatedCost.toFixed(2)} per full planning cycle.
-            </p>
-          </div>
-        </div>
-
-        <div className="dashboard-panel">
-          <div className="section-heading compact">
-            <p className="eyebrow">Execution progress</p>
-            <h2>{completedCount} of {plan.checklist.length} checklist items done</h2>
-          </div>
-          <div className="radial" style={{ "--progress": `${completionPercent}%` } as React.CSSProperties}>
-            <span>{completionPercent}%</span>
-            <p>local progress</p>
-          </div>
-          <div className="progress-strip">
-            <span>90-day readiness target: {plan.masteryScore}%</span>
-            <div>
-              <i style={{ width: `${plan.masteryScore}%` }} />
-            </div>
-          </div>
-          <button className="secondary-tool-button" onClick={refreshGapAnalysis} type="button">
-            Analyze gaps
-          </button>
-          {gapAnalysis ? (
-            <div className="analysis-box">
-              <strong>{gapAnalysis.riskLevel} risk</strong>
-              <p>{gapAnalysis.summary}</p>
-              <span>Weak areas: {gapAnalysis.weakCategories.join(", ") || "none"}</span>
-            </div>
-          ) : null}
-        </div>
-      </section>
-
-      <section className="tool-grid" aria-label="Action plan and daily routine">
-        <div className="action-panel">
-          <div className="section-heading compact">
-            <p className="eyebrow">Action items</p>
-            <h2>Do this next</h2>
-          </div>
-          {plan.actionItems.map((item) => (
-            <article key={item.id}>
-              <div>
-                <strong>{item.title}</strong>
-                <p>{item.owner} agent - due {item.due}</p>
-              </div>
-              <span>{item.impact}</span>
-            </article>
-          ))}
-        </div>
-
-        <div className="routine-panel">
-          <div className="section-heading compact">
-            <p className="eyebrow">Daily routine</p>
-            <h2>Repeatable study loop</h2>
-          </div>
-          {plan.dailyRoutine.map((routine) => (
-            <article key={`${routine.timebox}-${routine.ritual}`}>
-              <span>{routine.timebox}</span>
-              <div>
-                <strong>{routine.ritual}</strong>
-                <p>{routine.agent} produces: {routine.output}</p>
-              </div>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      <section className="process-flow" aria-label="Learning process flow">
-        {processSteps.map((step, index) => (
-          <div key={step} className="flow-node">
-            <span>{index + 1}</span>
-            <p>{step}</p>
-          </div>
-        ))}
-      </section>
-
-      <section className="sprint-grid" id="sprint" aria-label="20 hour learning sprint">
-        <div className="section-heading">
-          <p className="eyebrow">20-hour sprint</p>
-          <h2>Fast competence before deep mastery</h2>
-        </div>
-        <div className="sprint-cards">
-          {plan.twentyHourSprint.map((block) => (
-            <article key={block.block}>
-              <span>{block.block}</span>
-              <h3>{block.goal}</h3>
-              <ul>
-                {block.exercises.map((exercise) => (
-                  <li key={exercise}>{exercise}</li>
-                ))}
-              </ul>
-              <p>{block.proof}</p>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      <section className="tracker-grid" id="tracker" aria-label="Checklist and progress tracker">
-        <div className="checklist-panel">
-          <div className="section-heading compact">
-            <p className="eyebrow">Checklist</p>
-            <h2>Track execution</h2>
-          </div>
-          {plan.checklist.map((item) => (
-            <label className="check-row" key={item.id}>
-              <input
-                checked={Boolean(checkedItems[item.id])}
-                onChange={(event) => void toggleChecklistItem(item.id, event.target.checked)}
-                type="checkbox"
-              />
-              <span>
-                <strong>{item.label}</strong>
-                <small>{item.category}</small>
-              </span>
-            </label>
-          ))}
-        </div>
-
-        <div className="progress-panel">
-          <div className="section-heading compact">
-            <p className="eyebrow">Progress tracker</p>
-            <h2>13-week mastery curve</h2>
-          </div>
-          <div className="tracker-list">
-            {plan.progressTracker.map((week) => (
-              <article key={week.week}>
-                <span>W{week.week}</span>
-                <div>
-                  <strong>{week.target}</strong>
-                  <p>{week.evidence}</p>
-                  <div className="mini-meter">
-                    <i style={{ width: `${week.score}%` }} />
+            <>
+              <div className="reader-layout">
+                <article className="reader-main">
+                  <span className="reader-kicker">Plan summary</span>
+                  <h3>{plan.outcome}</h3>
+                  <p>{plan.executiveSummary}</p>
+                  <div className="reader-meta">
+                    <span>{getModelById(plan.selectedModelId).name}</span>
+                    <span>{generationMode === "live-model" ? "Live model" : "Local fallback"}</span>
+                    <span>{storedPlanId ? "Saved" : "Not saved"}</span>
+                    <span>{completionPercent}% complete</span>
                   </div>
-                </div>
-              </article>
-            ))}
-          </div>
-        </div>
-      </section>
+                </article>
 
-      <section className="insights" id="agents">
-        <div className="chart-panel">
-          <div className="section-heading compact">
-            <p className="eyebrow">Weekly operating system</p>
-            <h2>Study load becomes outputs</h2>
-          </div>
-          <div className="bar-chart" aria-label="Weekly study minutes chart">
-            {plan.weeklyOperatingSystem.map((day) => (
-              <div key={day.day} className="bar-wrap">
-                <div className="bar" style={{ height: `${Math.max(18, (day.minutes / weeklyMax) * 100)}%` }}>
-                  <span>{day.minutes}m</span>
-                </div>
-                <strong>{day.day}</strong>
-                <small>{day.focus}</small>
+                <aside className="today-card">
+                  <span className="reader-kicker">Today</span>
+                  <h3>{plan.dailyRoutine[0]?.ritual ?? "Start with recall"}</h3>
+                  <p>{plan.dailyRoutine[0]?.output ?? "Create your first study note."}</p>
+                  <button
+                    className="secondary-tool-button"
+                    onClick={() => void toggleChecklistItem(plan.checklist[0]?.id ?? "today", true)}
+                    type="button"
+                  >
+                    Mark first step done
+                  </button>
+                </aside>
               </div>
-            ))}
-          </div>
-        </div>
 
-        <div className="model-panel">
-          <div className="section-heading compact">
-            <p className="eyebrow">Agent chain</p>
-            <h2>Specialists embedded in the app</h2>
-          </div>
-          {plan.agentChain.map((agent) => {
-            const model = getModelById(agent.modelId);
-            return (
-              <div className="model-row" key={agent.agent}>
-                <div className="agent-title">
-                  <strong>{agent.agent}</strong>
-                  <span style={{ borderColor: model.providerColor }}>{model.name}</span>
-                </div>
-                <p>{agent.mission}</p>
-                <small>{agent.deliverable}</small>
+              <div className="reader-sections">
+                <article>
+                  <h3>Action Items</h3>
+                  {plan.actionItems.map((item) => (
+                    <div className="reader-row" key={item.id}>
+                      <span>{item.due}</span>
+                      <p>
+                        <strong>{item.title}</strong>
+                        {item.owner} agent - {item.impact} impact
+                      </p>
+                    </div>
+                  ))}
+                </article>
+
+                <article>
+                  <h3>Daily Routine</h3>
+                  {plan.dailyRoutine.map((routine) => (
+                    <div className="reader-row" key={`${routine.timebox}-${routine.ritual}`}>
+                      <span>{routine.timebox}</span>
+                      <p>
+                        <strong>{routine.ritual}</strong>
+                        {routine.agent} output: {routine.output}
+                      </p>
+                    </div>
+                  ))}
+                </article>
+
+                <article>
+                  <h3>20-Hour Sprint</h3>
+                  {plan.twentyHourSprint.map((block) => (
+                    <div className="reader-row" key={block.block}>
+                      <span>{block.block}</span>
+                      <p>
+                        <strong>{block.goal}</strong>
+                        {block.proof}
+                      </p>
+                    </div>
+                  ))}
+                </article>
               </div>
-            );
-          })}
-        </div>
-      </section>
 
-      <section className="roadmap" id="roadmap" aria-label="90 day roadmap">
-        <div className="section-heading">
-          <p className="eyebrow">90-day mastery</p>
-          <h2>Three phases with proof gates</h2>
-        </div>
-        <div className="month-tabs phase-tabs" role="tablist" aria-label="Roadmap phase">
-          {plan.ninetyDayRoadmap.map((phase, index) => (
-            <button
-              aria-selected={selectedPhase === index}
-              className={selectedPhase === index ? "active" : ""}
-              key={phase.phase}
-              onClick={() => setSelectedPhase(index)}
-              role="tab"
-              type="button"
-            >
-              {phase.phase}
-            </button>
-          ))}
-        </div>
-        <div className="phase-detail">
-          <span>{activePhase.days}</span>
-          <h3>{activePhase.objective}</h3>
-          <div>
-            {activePhase.milestones.map((milestone) => (
-              <p key={milestone}>{milestone}</p>
-            ))}
-          </div>
-          <strong>{activePhase.assessment}</strong>
-        </div>
-      </section>
+              <div className="reader-checklist">
+                <div>
+                  <h3>Execution Checklist</h3>
+                  <p>{completedCount} of {plan.checklist.length} complete. Check items off as you study.</p>
+                  <button className="secondary-tool-button" onClick={refreshGapAnalysis} type="button">
+                    Analyze gaps
+                  </button>
+                  {gapAnalysis ? (
+                    <div className="analysis-box">
+                      <strong>{gapAnalysis.riskLevel} risk</strong>
+                      <p>{gapAnalysis.summary}</p>
+                      <span>Weak areas: {gapAnalysis.weakCategories.join(", ") || "none"}</span>
+                    </div>
+                  ) : null}
+                </div>
+                <div className="reader-check-grid">
+                  {plan.checklist.map((item) => (
+                    <label className="compact-check" key={item.id}>
+                      <input
+                        checked={Boolean(checkedItems[item.id])}
+                        onChange={(event) => void toggleChecklistItem(item.id, event.target.checked)}
+                        type="checkbox"
+                      />
+                      <span>{item.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
 
-      <section className="update-loop" aria-label="Progress update prompts">
-        <div className="section-heading">
-          <p className="eyebrow">Update loop</p>
-          <h2>Prompts that keep the AI chain working after day one</h2>
-        </div>
-        <div className="update-grid">
-          {plan.updateLoop.map((item) => (
-            <article key={item.trigger}>
-              <span>{item.trigger}</span>
-              <h3>{item.agent}</h3>
-              <p>{item.prompt}</p>
-            </article>
-          ))}
-        </div>
-      </section>
+              <div className="reader-sections two-column">
+                <article>
+                  <h3>90-Day Roadmap</h3>
+                  {plan.ninetyDayRoadmap.map((phase) => (
+                    <div className="reader-row" key={phase.phase}>
+                      <span>{phase.days}</span>
+                      <p>
+                        <strong>{phase.phase}: {phase.objective}</strong>
+                        {phase.assessment}
+                      </p>
+                    </div>
+                  ))}
+                </article>
 
-      <section className="models" id="models" aria-label="Model configuration">
-        <div className="section-heading">
-          <p className="eyebrow">Model economics</p>
-          <h2>Choose the default brain for planning and evaluation</h2>
-        </div>
-        <div className="selected-model">
-          <strong>{selectedModel.name}</strong>
-          <p>{selectedModel.description}</p>
-          <span>
-            {selectedModel.contextWindow} context - ${selectedModel.inputPricePer1M}/M in - $
-            {selectedModel.outputPricePer1M}/M out
-          </span>
-        </div>
-        <div className="model-grid">
-          {MODELS.map((model) => (
-            <button
-              className={modelId === model.id ? "model-card active" : "model-card"}
-              key={model.id}
-              onClick={() => setModelId(model.id)}
-              type="button"
-            >
-              <span style={{ background: model.providerColor }}>{model.providerLabel ?? model.provider}</span>
-              <strong>{model.name}</strong>
-              <p>{model.description}</p>
-              <small>
-                {model.isFree ? "Free tier" : `$${model.inputPricePer1M}/M in`} - {model.contextWindow}
-              </small>
-              {model.badge ? <em>{model.badge}</em> : null}
-            </button>
-          ))}
-        </div>
+                <article>
+                  <h3>Update Loop</h3>
+                  {plan.updateLoop.map((item) => (
+                    <div className="reader-row" key={item.trigger}>
+                      <span>{item.trigger}</span>
+                      <p>
+                        <strong>{item.agent}</strong>
+                        {item.prompt}
+                      </p>
+                    </div>
+                  ))}
+                </article>
+              </div>
+            </>
+          )}
+        </section>
       </section>
     </main>
   );
