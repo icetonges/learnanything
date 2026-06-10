@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { LearningPlan, PlanRequest } from "@/lib/learning-engine";
 import { createLearningPlan } from "@/lib/learning-engine";
 import { DEFAULT_MODEL_ID, getModelById, MODELS } from "@/lib/models";
+import type { GapAnalysis } from "@/lib/analysis";
 
 type Theme = "dark" | "light";
 type Level = PlanRequest["level"];
@@ -43,6 +44,9 @@ export default function Home() {
   const [checkedItems, setCheckedItems] = useState<Record<string, boolean>>({});
   const [agentTrace, setAgentTrace] = useState<AgentTrace[]>([]);
   const [generationMode, setGenerationMode] = useState<"live-model" | "local-planner">("local-planner");
+  const [storedPlanId, setStoredPlanId] = useState<string | null>(null);
+  const [databaseStatus, setDatabaseStatus] = useState<"saved" | "not-configured" | "error">("not-configured");
+  const [gapAnalysis, setGapAnalysis] = useState<GapAnalysis | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState("");
 
@@ -92,6 +96,8 @@ export default function Home() {
         error?: string;
         mode?: "live-model" | "local-planner";
         agentTrace?: AgentTrace[];
+        storedPlanId?: string | null;
+        database?: "saved" | "not-configured" | "error";
       };
 
       if (!response.ok || !payload.plan) {
@@ -101,12 +107,62 @@ export default function Home() {
       setPlan(payload.plan);
       setAgentTrace(payload.agentTrace ?? []);
       setGenerationMode(payload.mode ?? "local-planner");
+      setStoredPlanId(payload.storedPlanId ?? null);
+      setDatabaseStatus(payload.database ?? "not-configured");
+      setGapAnalysis(null);
       setSelectedPhase(0);
       setCheckedItems({});
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Could not generate plan.");
     } finally {
       setIsGenerating(false);
+    }
+  }
+
+  async function toggleChecklistItem(itemId: string, checked: boolean) {
+    setCheckedItems((current) => ({ ...current, [itemId]: checked }));
+
+    if (!storedPlanId) {
+      return;
+    }
+
+    try {
+      await fetch(`/api/plans/${storedPlanId}/tracker`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          itemId,
+          itemType: "checklist",
+          status: checked ? "completed" : "open"
+        })
+      });
+    } catch {
+      setDatabaseStatus("error");
+    }
+  }
+
+  async function refreshGapAnalysis() {
+    if (!storedPlanId) {
+      setGapAnalysis({
+        completionPercent,
+        completedCount,
+        totalChecklistItems: plan.checklist.length,
+        weakCategories: plan.checklist.filter((item) => !checkedItems[item.id]).map((item) => item.category).slice(0, 4),
+        nextActions: plan.actionItems.slice(0, 4).map((item) => item.title),
+        riskLevel: completionPercent >= 70 ? "Low" : completionPercent >= 35 ? "Medium" : "High",
+        summary: "Local analysis only. Save the plan to Neon to analyze persisted tracker events."
+      });
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/plans/${storedPlanId}/analysis`);
+      const payload = (await response.json()) as { analysis?: GapAnalysis };
+      if (payload.analysis) {
+        setGapAnalysis(payload.analysis);
+      }
+    } catch {
+      setDatabaseStatus("error");
     }
   }
 
@@ -203,6 +259,10 @@ export default function Home() {
               {generationMode === "live-model" ? "Live model" : "Local fallback"}
             </span>
           </div>
+          <div className="storage-row">
+            <span>Database: {databaseStatus === "saved" ? "saved to Neon" : databaseStatus}</span>
+            {storedPlanId ? <code>{storedPlanId}</code> : null}
+          </div>
           {error ? <p className="error-message">{error}</p> : null}
         </div>
 
@@ -272,6 +332,16 @@ export default function Home() {
               <i style={{ width: `${plan.masteryScore}%` }} />
             </div>
           </div>
+          <button className="secondary-tool-button" onClick={refreshGapAnalysis} type="button">
+            Analyze gaps
+          </button>
+          {gapAnalysis ? (
+            <div className="analysis-box">
+              <strong>{gapAnalysis.riskLevel} risk</strong>
+              <p>{gapAnalysis.summary}</p>
+              <span>Weak areas: {gapAnalysis.weakCategories.join(", ") || "none"}</span>
+            </div>
+          ) : null}
         </div>
       </section>
 
@@ -349,7 +419,7 @@ export default function Home() {
             <label className="check-row" key={item.id}>
               <input
                 checked={Boolean(checkedItems[item.id])}
-                onChange={(event) => setCheckedItems((current) => ({ ...current, [item.id]: event.target.checked }))}
+                onChange={(event) => void toggleChecklistItem(item.id, event.target.checked)}
                 type="checkbox"
               />
               <span>

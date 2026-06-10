@@ -49,4 +49,8 @@ GEMINI_API_KEY=
 GROQ_API_KEY=
 DEEPSEEK_API_KEY=
 ANTHROPIC_API_KEY=
+DATABASE_URL=
+POSTGRES_URL=
 ```
+
+Use the pooled Neon URL for `DATABASE_URL` or `POSTGRES_URL`. The app creates its own `learning_plans` and `tracker_events` tables on first API use.

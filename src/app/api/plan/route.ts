@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { isDatabaseConfigured, saveLearningPlan } from "@/lib/db";
 import { validatePlanRequest } from "@/lib/learning-engine";
 import { runLearningAgentChain } from "@/lib/ai-chain";
 
@@ -18,9 +19,23 @@ export async function POST(request: Request) {
   }
 
   const result = await runLearningAgentChain(parsed.value);
+  let storedPlanId: string | null = null;
+  let database: "saved" | "not-configured" | "error" = isDatabaseConfigured() ? "error" : "not-configured";
+
+  if (isDatabaseConfigured()) {
+    try {
+      const stored = await saveLearningPlan(parsed.value, result.plan, result.mode);
+      storedPlanId = stored.id;
+      database = "saved";
+    } catch {
+      database = "error";
+    }
+  }
 
   return NextResponse.json({
     ...result,
+    storedPlanId,
+    database,
     note:
       result.mode === "live-model"
         ? "Generated with a server-side model adapter. API keys were never sent to the browser."

@@ -790,6 +790,54 @@ input[type="range"] {
   color: var(--teal);
 }
 
+.storage-row {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.storage-row span,
+.storage-row code {
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: 0.82rem;
+  padding: 8px 10px;
+}
+
+.secondary-tool-button {
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  color: var(--text);
+  cursor: pointer;
+  font-weight: 900;
+  min-height: 44px;
+  padding: 10px 14px;
+  width: 100%;
+}
+
+.analysis-box {
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+  padding: 14px;
+}
+
+.analysis-box strong {
+  color: var(--amber);
+}
+
+.analysis-box p,
+.analysis-box span {
+  color: var(--muted);
+  line-height: 1.45;
+  margin: 0;
+}
+
 .agent-run,
 .action-panel,
 .routine-panel,
